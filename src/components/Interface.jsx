@@ -18,18 +18,18 @@ const Interface = () => {
 
   // ✅ ตัวช่วย: พยายามดึงชื่อจากหลายฟิลด์ที่อาจมีมา
   const getDisplayName = (post) => {
-    // รองรับหลายสคีมา: post.author / post.user / post.createdBy / post.owner
-    const u = post.author || post.user || post.createdBy || post.owner || {};
-    // เผื่อ backend ส่งมาเป็นสตริง username ตรง ๆ
+    // ✅ เช็คชื่อที่ flatten มาเป็น post.name ก่อน
+    if (post?.name) return post.name;
+
+    // จากนั้นค่อยเช็ค object ผู้ใช้ตามสคีมาต่าง ๆ
+    const u = post?.author || post?.user || post?.createdBy || post?.owner || null;
     if (typeof u === 'string') return u;
-    return (
-      u.displayName ||
-      u.fullName ||
-      u.name ||
-      u.username ||
-      post.authorName || // กรณี backend ทำแบน ๆ
-      'Anonymous'
-    );
+    if (u && (u.name || u.displayName || u.fullName || u.username)) {
+      return u.name || u.displayName || u.fullName || u.username;
+    }
+
+    // สุดท้ายค่อย fallback
+    return post?.authorName || 'Anonymous';
   };
 
   useEffect(() => {
@@ -39,11 +39,13 @@ const Interface = () => {
   const loadPosts = async () => {
     try {
       const data = await apiFetchPosts();
+      if (data?.length) console.log('[SAMPLE POST]', data[0]); // ดูว่า name โผล่แล้วไหม
       setPosts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch posts failed', err);
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
