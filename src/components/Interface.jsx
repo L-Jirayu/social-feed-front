@@ -1,4 +1,4 @@
-// Interface.jsx
+// src/pages/Interface.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import './css/Interface.css';
 import {
@@ -16,19 +16,13 @@ const Interface = () => {
   const [editingPost, setEditingPost] = useState(null);
   const fileInputRef = useRef(null);
 
-  // ✅ ตัวช่วย: พยายามดึงชื่อจากหลายฟิลด์ที่อาจมีมา
   const getDisplayName = (post) => {
-    // ✅ เช็คชื่อที่ flatten มาเป็น post.name ก่อน
-    if (post?.name) return post.name;
-
-    // จากนั้นค่อยเช็ค object ผู้ใช้ตามสคีมาต่าง ๆ
+    if (post?.name) return post.name;  // ชื่อถูกเติมมาจาก fetchPosts แล้ว
     const u = post?.author || post?.user || post?.createdBy || post?.owner || null;
     if (typeof u === 'string') return u;
     if (u && (u.name || u.displayName || u.fullName || u.username)) {
       return u.name || u.displayName || u.fullName || u.username;
     }
-
-    // สุดท้ายค่อย fallback
     return post?.authorName || 'Anonymous';
   };
 
@@ -39,13 +33,12 @@ const Interface = () => {
   const loadPosts = async () => {
     try {
       const data = await apiFetchPosts();
-      if (data?.length) console.log('[SAMPLE POST]', data[0]); // ดูว่า name โผล่แล้วไหม
+      if (data?.length) console.log('[SAMPLE POST]', data[0]);
       setPosts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch posts failed', err);
     }
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,17 +114,13 @@ const Interface = () => {
         <div className="posts-list">
           {posts.map((post) => (
             <div key={post._id} className="post-card">
-              {/* ✅ ส่วนหัว แสดงชื่อผู้โพสต์ */}
               <div className="post-header">
                 <div className="avatar-circle" aria-hidden />
                 <div className="post-meta">
                   <div className="post-author">{getDisplayName(post)}</div>
-                  {/* เผื่อมีเวลา/วันที่ในอนาคต */}
-                  {/* <div className="post-time">{formatDate(post.createdAt)}</div> */}
                 </div>
               </div>
 
-              {/* เนื้อหาโพสต์ */}
               {post.content && <p className="post-content">{post.content}</p>}
 
               {post.imageUrl && (
@@ -157,9 +146,7 @@ const Interface = () => {
           ))}
         </div>
 
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
+        <button className="logout-btn" onClick={handleLogout}>Logout</button>
       </div>
     </div>
   );
