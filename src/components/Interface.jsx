@@ -16,6 +16,22 @@ const Interface = () => {
   const [editingPost, setEditingPost] = useState(null);
   const fileInputRef = useRef(null);
 
+  // ✅ ตัวช่วย: พยายามดึงชื่อจากหลายฟิลด์ที่อาจมีมา
+  const getDisplayName = (post) => {
+    // รองรับหลายสคีมา: post.author / post.user / post.createdBy / post.owner
+    const u = post.author || post.user || post.createdBy || post.owner || {};
+    // เผื่อ backend ส่งมาเป็นสตริง username ตรง ๆ
+    if (typeof u === 'string') return u;
+    return (
+      u.displayName ||
+      u.fullName ||
+      u.name ||
+      u.username ||
+      post.authorName || // กรณี backend ทำแบน ๆ
+      'Anonymous'
+    );
+  };
+
   useEffect(() => {
     loadPosts();
   }, []);
@@ -103,7 +119,19 @@ const Interface = () => {
         <div className="posts-list">
           {posts.map((post) => (
             <div key={post._id} className="post-card">
-              <p>{post.content}</p>
+              {/* ✅ ส่วนหัว แสดงชื่อผู้โพสต์ */}
+              <div className="post-header">
+                <div className="avatar-circle" aria-hidden />
+                <div className="post-meta">
+                  <div className="post-author">{getDisplayName(post)}</div>
+                  {/* เผื่อมีเวลา/วันที่ในอนาคต */}
+                  {/* <div className="post-time">{formatDate(post.createdAt)}</div> */}
+                </div>
+              </div>
+
+              {/* เนื้อหาโพสต์ */}
+              {post.content && <p className="post-content">{post.content}</p>}
+
               {post.imageUrl && (
                 <img
                   src={`https://minifeed-back.onrender.com/uploads/${post.imageUrl}`}
@@ -118,6 +146,7 @@ const Interface = () => {
                   className="post-image"
                 />
               )}
+
               <div className="post-actions">
                 <button className="edit-btn" onClick={() => handleEdit(post)}>Edit</button>
                 <button className="delete-btn" onClick={() => handleDelete(post._id)}>Delete</button>

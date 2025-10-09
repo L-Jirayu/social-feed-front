@@ -184,3 +184,47 @@ body {
     min-height: 60px;
   }
 }
+
+.post-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb; /* วงกลม placeholder */
+  flex-shrink: 0;
+}
+
+.post-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.post-author {
+  font-weight: 600;
+  color: #111827;
+}
+
+.post-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.post-content {
+  margin: 6px 0 10px 0;
+  white-space: pre-wrap;
+}
