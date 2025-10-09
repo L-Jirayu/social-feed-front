@@ -1,22 +1,38 @@
+// src/api/authApi.js
 const BASE_URL = "https://minifeed-back.onrender.com";
 
 /* ---------- ME CACHE (ไม่พึ่ง /user/profile) ---------- */
 let __cachedProfile = null;
 
 function setCachedMe(me) {
-  if (me && (me._id || me.id)) {
-    __cachedProfile = { _id: me._id || me.id, name: me.name };
+  if (!me) return;
+  const id = me._id || me.id;
+  const name = me.name || me.username || me.displayName || null;
+  if (id) {
+    __cachedProfile = { _id: String(id), name };
     try { localStorage.setItem('me', JSON.stringify(__cachedProfile)); } catch {}
   }
 }
 
-function getCachedMe() {
+export function getCachedMe() {
   if (__cachedProfile) return __cachedProfile;
   try {
     const raw = localStorage.getItem('me');
-    if (raw) { __cachedProfile = JSON.parse(raw); }
+    if (raw) __cachedProfile = JSON.parse(raw);
   } catch {}
   return __cachedProfile;
+}
+
+function extractUser(out) {
+  if (!out) return null;
+  if (out.user) return out.user;                // { user: {...} }
+  if (out.profile) return out.profile;          // { profile: {...} }
+  if (out.data?.user) return out.data.user;     // { data: { user: {...} } }
+  if (out.data?.profile) return out.data.profile;
+  return {                                      // flat
+    _id: out._id || out.id,
+    name: out.name || out.username || out.displayName || null,
+  };
 }
 
 /** =================== AUTH / USER =================== */
@@ -24,12 +40,11 @@ export async function registerUser(data) {
   const res = await fetch(`${BASE_URL}/user/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Register failed');
   const out = await res.json();
-  // ถ้า API register ตอบกลับ user ให้ cache ไว้เลย (เผื่อบางระบบล็อกอินอัตโนมัติ)
-  if (out?.user || out?._id || out?.id) setCachedMe(out.user ?? out);
+  setCachedMe(extractUser(out));    // เผื่อ API คืน user กลับมา
   return out;
 }
 
@@ -38,18 +53,19 @@ export async function loginUser(data) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Login failed');
   const out = await res.json();
-  // ⬅️ สำคัญ: เก็บโปรไฟล์จาก response (ปรับให้ตรงกับรูปแบบของคุณ)
-  // ตัวอย่างที่พบบ่อย: { user: { _id, name, ... }, token: ... }
-  if (out?.user || out?._id || out?.id) setCachedMe(out.user ?? out);
+  setCachedMe(extractUser(out));    // เก็บ {_id,name} ไว้ใช้เทียบกับ post.userId
   return out;
 }
 
 export async function logoutUser() {
-  const res = await fetch(`${BASE_URL}/auth/logout`, { method: "POST", credentials: "include" });
+  const res = await fetch(`${BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
   if (!res.ok) throw new Error('Logout failed');
   __cachedProfile = null;
   try { localStorage.removeItem('me'); } catch {}
@@ -58,7 +74,7 @@ export async function logoutUser() {
 
 /** =================== POST AND UPLOAD =================== */
 
-// ดึงโพสต์ทั้งหมด + เติมชื่อของ "ฉัน" ให้โพสต์ที่เป็นของฉัน
+// ดึงโพสต์ทั้งหมด + เติมชื่อให้โพสต์ของเราเอง
 export async function fetchPosts() {
   const res = await fetch(`${BASE_URL}/postandup`, {
     method: "GET",
@@ -68,9 +84,10 @@ export async function fetchPosts() {
   const data = await res.json();
   const arr = Array.isArray(data) ? data : [];
 
-  const me = getCachedMe(); // {_id, name} หรือ null
+  const me = getCachedMe();                    // {_id, name} หรือ null
+  const myId = me?._id ? String(me._id) : null;
 
-  return arr.map(p => {
+  return arr.map((p) => {
     const nameFromApi =
       p.name ??
       p.user?.name ??
@@ -79,29 +96,31 @@ export async function fetchPosts() {
       p.owner?.name ??
       null;
 
-    // ถ้า API ไม่ส่งชื่อมา แต่เป็นโพสต์ของฉัน → เติมชื่อฉันให้
-    const name =
-      nameFromApi ??
-      ((me && (p.userId === me._id || p.user === me._id)) ? me.name : null);
+    const postUserId =
+      p.userId ? String(p.userId)
+               : (p.user ? String(p.user) : null);
+
+    const isMine = !!(myId && postUserId && postUserId === myId);
+
+    const name = nameFromApi ?? (isMine ? (me.name || 'You') : null);
 
     return { ...p, name };
   });
 }
 
-// สร้างโพสต์ใหม่ (แนบ name จาก cache — ไม่เรียก /user/profile)
+// สร้างโพสต์ใหม่ (แนบ name ไปด้วยถ้ามี)
 export async function createPost({ content, image }) {
   const me = getCachedMe();
   const formData = new FormData();
   formData.append('content', content);
   if (image) formData.append('file', image);
-  if (me?.name) formData.append('name', me.name); // แนบชื่อไปให้ BE เก็บเลย (ถ้า BE รับฟิลด์นี้)
+  if (me?.name) formData.append('name', me.name); // ถ้า BE รองรับ field นี้
 
   const res = await fetch(`${BASE_URL}/postandup`, {
     method: "POST",
     credentials: "include",
     body: formData,
   });
-
   if (!res.ok) throw new Error('Failed to create post');
   return await res.json();
 }
@@ -116,7 +135,6 @@ export async function updatePost(id, { content, image }) {
     credentials: "include",
     body: formData,
   });
-
   if (!res.ok) throw new Error('Failed to update post');
   return await res.json();
 }
