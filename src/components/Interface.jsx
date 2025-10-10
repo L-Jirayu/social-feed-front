@@ -169,7 +169,17 @@ const Interface = () => {
           {posts.map((post) => (
             <div key={post._id} className="post-card">
               <div className="post-header">
-                <div className="avatar-circle" aria-hidden />
+                <div className="avatar-circle" aria-hidden>
+                  <svg
+                    className="avatar-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z"/>
+                  </svg>
+                </div>
+
                 <div className="post-meta">
                   <div className="post-author">{getDisplayName(post)}</div>
                 </div>

@@ -228,3 +228,23 @@ body {
   margin: 6px 0 10px 0;
   white-space: pre-wrap;
 }
+
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  flex-shrink: 0;
+
+  /* ✅ จัดไอคอนให้อยู่กลาง และมีขอบบาง ๆ */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+}
+
+.avatar-icon {
+  width: 22px;
+  height: 22px;
+  fill: #9ca3af; /* เทาอ่อนแนว default avatar */
+}
