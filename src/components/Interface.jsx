@@ -14,7 +14,21 @@ const Interface = () => {
   const [image, setImage] = useState(null);
   const [posts, setPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
+  const [displayName, setDisplayName] = useState(''); // ✅ ชื่อผู้ใช้สำหรับหัว Welcome
   const fileInputRef = useRef(null);
+
+  // ดึงชื่อจาก localStorage (ถูกเซ็ตตอน login)
+  useEffect(() => {
+    try {
+      const meRaw = localStorage.getItem('me');
+      if (meRaw) {
+        const me = JSON.parse(meRaw);
+        if (me?.name) setDisplayName(me.name);
+      }
+    } catch (e) {
+      console.warn('Cannot load me from localStorage');
+    }
+  }, []);
 
   const getDisplayName = (post) => {
     if (post?.name) return post.name;  // ชื่อถูกเติมมาจาก fetchPosts แล้ว
@@ -91,7 +105,8 @@ const Interface = () => {
   return (
     <div className="interface-container">
       <div className="interface-box">
-        <h1>Welcome 👋</h1>
+        {/* ✅ โชว์ชื่อผู้ใช้ตรงหัว */}
+        <h1>Welcome 👋 {displayName || 'User'}</h1>
         <p>You have successfully logged in.</p>
 
         <form onSubmit={handleSubmit} className="post-form">
