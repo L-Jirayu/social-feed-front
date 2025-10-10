@@ -9,29 +9,55 @@ import {
   logoutUser,
 } from "../api/authApi";
 
+const BASE_URL = "https://minifeed-back.onrender.com";
+
 const Interface = () => {
   const [content, setContent] = useState('');
   const [image, setImage] = useState(null);
   const [posts, setPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
-  const [displayName, setDisplayName] = useState(''); // ✅ ชื่อผู้ใช้สำหรับหัว Welcome
+  const [displayName, setDisplayName] = useState('');
   const fileInputRef = useRef(null);
 
-  // ดึงชื่อจาก localStorage (ถูกเซ็ตตอน login)
-  useEffect(() => {
+  // ดึงชื่อจาก /user/profile ถ้าได้ก็แคชไว้, ถ้าไม่ได้ค่อยอ่านจาก localStorage
+  const loadDisplayName = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/user/profile`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const me = await res.json(); // คาดหวัง { _id, name, ... }
+        if (me?.name) {
+          setDisplayName(me.name);
+          // อัปเดต cache ให้แน่ใจว่ามี name
+          try {
+            const old = JSON.parse(localStorage.getItem('me') || '{}');
+            localStorage.setItem('me', JSON.stringify({ _id: old?._id || me._id || me.id, name: me.name }));
+          } catch {}
+          return;
+        }
+      }
+    } catch (e) {
+      // เงียบไว้ ใช้ fallback ต่อไป
+    }
+    // Fallback: localStorage
     try {
       const meRaw = localStorage.getItem('me');
       if (meRaw) {
         const me = JSON.parse(meRaw);
         if (me?.name) setDisplayName(me.name);
       }
-    } catch (e) {
-      console.warn('Cannot load me from localStorage');
-    }
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadDisplayName();
+    loadPosts();
   }, []);
 
   const getDisplayName = (post) => {
-    if (post?.name) return post.name;  // ชื่อถูกเติมมาจาก fetchPosts แล้ว
+    if (post?.name) return post.name;
     const u = post?.author || post?.user || post?.createdBy || post?.owner || null;
     if (typeof u === 'string') return u;
     if (u && (u.name || u.displayName || u.fullName || u.username)) {
@@ -39,10 +65,6 @@ const Interface = () => {
     }
     return post?.authorName || 'Anonymous';
   };
-
-  useEffect(() => {
-    loadPosts();
-  }, []);
 
   const loadPosts = async () => {
     try {
@@ -77,35 +99,20 @@ const Interface = () => {
     }
   };
 
-  const handleEdit = (post) => {
-    setEditingPost(post);
-    setContent(post.content || '');
-    setImage(null);
-  };
-
+  const handleEdit   = (post) => { setEditingPost(post); setContent(post.content || ''); setImage(null); };
   const handleDelete = async (id) => {
     if (!window.confirm('ลบโพสต์นี้จริงหรือไม่?')) return;
-    try {
-      await apiDeletePost(id);
-      loadPosts();
-    } catch (err) {
-      console.error('Delete failed', err);
-    }
+    try { await apiDeletePost(id); loadPosts(); } catch (err) { console.error('Delete failed', err); }
   };
 
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (err) {
-      console.error('Logout failed', err);
-    }
+    try { await logoutUser(); } catch (err) { console.error('Logout failed', err); }
     window.location.href = '/';
   };
 
   return (
     <div className="interface-container">
       <div className="interface-box">
-        {/* ✅ โชว์ชื่อผู้ใช้ตรงหัว */}
         <h1>Welcome 👋 {displayName || 'User'}</h1>
         <p>You have successfully logged in.</p>
 
